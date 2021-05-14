@@ -4,6 +4,7 @@ import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.everyItem;
 
 import org.hamcrest.MatcherAssert;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,4 +43,31 @@ class OvenTest {
         Mockito.verify(heatingModule, Mockito.times(1)).heater(heatingSettings);
     }
 
+    @Test
+    void ovenWithBakingProgramContainingOneProgramStageShouldCallFanToTurnOnOnceAndTurnOffOnceANdHeatingModuleOnceToActivateThermalCircuit() throws HeatingException {
+        programStage1 = ProgramStage.builder().withHeat(HeatType.THERMO_CIRCULATION).withStageTime(10).withTargetTemp(200).build();
+        heatingSettings = HeatingSettings.builder().withTargetTemp(200).withTimeInMinutes(10).build();
+        stageList = List.of(programStage1);
+        bakingProgram = BakingProgram.builder().withInitialTemp(200).withStages(stageList).build();
+        oven.start(bakingProgram);
+        Mockito.verify(fan, Mockito.times(1)).on();
+        Mockito.verify(fan, Mockito.times(1)).off();
+        Mockito.verify(heatingModule, Mockito.times(1)).termalCircuit(heatingSettings);
+    }
+
+    @Test
+    void ovenWithBakingProgramContainingOneProgramStageShouldCallFanToTurnOnOnceAndTurnOffOnceANdHeatingModuleOnceToActivateThermalCircuitShouldThrowOvenException() throws HeatingException {
+        programStage1 = ProgramStage.builder().withHeat(HeatType.THERMO_CIRCULATION).withStageTime(10).withTargetTemp(100).build();
+        heatingSettings = HeatingSettings.builder().withTargetTemp(100).withTimeInMinutes(10).build();
+        stageList = List.of(programStage1);
+        bakingProgram = BakingProgram.builder().withInitialTemp(200).withStages(stageList).build();
+        Mockito.doThrow(HeatingException.class).when(heatingModule).termalCircuit(heatingSettings);
+
+        Assertions.assertThrows(OvenException.class, () -> {
+            oven.start(bakingProgram);
+        });
+        Mockito.verify(fan, Mockito.times(1)).on();
+        Mockito.verify(fan, Mockito.times(1)).off();
+        Mockito.verify(heatingModule, Mockito.times(1)).termalCircuit(heatingSettings);
+    }
 }
